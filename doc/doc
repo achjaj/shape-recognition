@@ -1,0 +1,47 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+
+%opening
+\title{Working principle}
+\author{Jakub Bucko}
+
+\begin{document}
+
+\maketitle
+
+\section{Overwiev}
+The shape identification process is divided into two main parts:
+
+\begin{enumerate}
+    \item Image preprocessing
+    \item Shape recognition
+\end{enumerate}
+
+The main purpose if the image preprocessing is to resize the object on the input image and reduce
+number of degrees of freedom. This procedure allow us to feed an image of arbitrary size into
+the program.
+
+The shape recognition part operates on the preprocessed image and is done using simple neural network.
+
+\section{Image preprocessing}
+In the beggining the image is binarized, i.e. it is converted into matrix containing ones and zeros.
+This ensures that there is no colour in the image as it is not needed for shape recognition.
+I use convention where white pixel is denoted by zero and black by one. This simplify the following
+algorithm.
+
+After the binarization the preprocessing function tries to localize the relevant part of the image.
+This is done by looking for a rectangle that encapsulates the relevant part.
+The rectangle is found by firstly scanning the binarized image from top to bottom. The first non-empty
+row (that is row with at least one 1) is a line that touches the top side of the rectangle. The last
+non-empty row is a line that touches the bottom side. Analogically, the left and right lines
+that toches the left and right sides of the rectangle are found by scanning the image from left to right.
+These lines determine the rectangle.
+
+Because of the used conevntion for binarized pixels (white = 0, black = 1), the implementation is quite
+simple. The top line is found by looking for the first non-zero sum of row. The bottom line is the
+last non-zero sum. Left and right lines are found by summing the columns.
+
+Finally, the region descibed by the encapsulating rectangle is cut out of the binarized imaged and
+resize to appropried size.
+
+\end{document}
