@@ -15,6 +15,6 @@ The *targets* matrix has size 3x111907 and contains the coresponding targets. Ev
 has one non-zero element which is at the position of the category index.
 The categories have following indices:
 
-    - Circle: 1
-    - rectangle: 2
-    - Triangle: 3
+- Circle: 1
+- rectangle: 2
+- Triangle: 3
