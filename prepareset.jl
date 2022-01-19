@@ -20,6 +20,7 @@ function processInput(inputDir::String, transformations, outputDir::String)
         image = ImgTransform.imgToBitMatrix(image)
         log("Cutting out shape")
         image = ImgTransform.cutoutShape(image)
+        image = xor.(image, 1)
 
         for (i, transform) in enumerate(transformations)
             log("Selecting $i-th transformation")
@@ -39,14 +40,17 @@ function processInput(inputDir::String, transformations, outputDir::String)
     end
 end
 
-inputs = ["presets/triangles/", "presets/rectangles/", "presets/circles/"]
-outputs = ["trainsets/triangles", "trainsets/rectangles", "trainsets/circles"]
+inputs = ["/run/media/jakub/3315-3BCD/trainset/triangles/", "/run/media/jakub/3315-3BCD/trainset/rectangles", "/run/media/jakub/3315-3BCD/trainset/circles"]
+outputs = ["/run/media/jakub/3315-3BCD/trainset/r/triangles/", "/run/media/jakub/3315-3BCD/trainset/r/rectangles", "/run/media/jakub/3315-3BCD/trainset/r/circles"]
+#inputs = ["/home/jakub/Dokumenty/skola/siete/neural/presets/triangles/"]#, "/home/jakub/Dokumenty/skola/siete/neural/presets/rectangles/", "/home/jakub/Dokumenty/skola/siete/neural/presets/circles/"]
 
-rotations = [x -> imrotate(x, θ) for θ in (π/180):(π/180):2π]
+rotations = [x -> imrotate(x, θ, fillvalue=1) for θ in (π/180):(π/180):2π]
 resize = [i -> imresize(i, 100, 100)]
 #TODO: add more transfomations; gaussian noise, add blob to random place, remove random part of the shape
 
 transformations = [resize]
+#transformations = [rotations]
+#transformations = [[x -> imrotate(x, π/4, fillvalue=1)]]
 
 log("Creating output directories")
 mkpath.(outputs)

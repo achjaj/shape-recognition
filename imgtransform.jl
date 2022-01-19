@@ -34,7 +34,8 @@ module ImgTransform
     end
 
     function imgToBitMatrix(img::Matrix)
-        binarized = binarize(img, Otsu()) # binarize using Otsu algorithm; returns Matrix{Gray}
+        noalfa = RGB{N0f8}.(img)
+        binarized = binarize(noalfa, Otsu()) # binarize using Otsu algorithm; returns Matrix{Gray}
         binarized = Bool.(binarized) # convert Matrix{Gray} to BitMatrix
         binarized = xor.(binarized, 1) # make "negative image"; binarize function transform white color to 1 and black to 0, I want it the other way around
     end

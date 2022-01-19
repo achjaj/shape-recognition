@@ -54,15 +54,19 @@ module Neural
 
     mean(x) = sum(x)/length(x)
 
+    leasSquareCost(o, t) = sum((o - t).^2)/2
+    dLeastSquareCost(o, t) = o-t
+
+    function applyLayer!(layer::Layer, x::Vector)
+        layer.z = layer.W*x + layer.b
+        layer.a = layer.afun(layer.z)
+
+        return layer.a
+    end
+
     function forward!(net::Net, x::Vector)
         input = x
-
-        for layer in net.layers
-            layer.z = layer.W*input + layer.b
-            layer.a = layer.afun(layer.z)
-
-            input = layer.a
-        end
+        map(layer -> input = applyLayer!(layer, input), net.layers)
 
         return input
     end
@@ -96,30 +100,27 @@ module Neural
 
     predict(net::Net, x::Vector{Float64}) = argmax(forward!(net, x))
 
-    function accuracy(net::Net, x::Vector{Vector{Float64}}, t::Vector{Vector{Float64}})
-        predictions = map(i -> predict(net, i), x)
-        cmp = [Int(predictions[i] == argmax(t[i])) for i in 1:length(t)]
+    function accuracy(net::Net, x::Matrix, t::Matrix)
+        predictions = (predict(net, x[:, i]) for i in size(x, 2)) # using generators to save memory
+        cmp = (Int(predictions[i] == argmax(t[:, i])) for i in 1:size(t, 2))
 
-        return sum(cmp)/length(t)
+        return sum(cmp)/size(t, 2)
     end
 
-    function train!(net::Net, x::Vector{Vector{Float64}}, t::Vector{Vector{Float64}}, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0)
+    function train!(net::Net, x::Matrix, t::Matrix, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0)
         for i in 1:epochs
             costs = Vector{Float64}()
             accs = Vector{Float64}()
-            indices = shuffle(1:length(x))
+            indices = shuffle(1:size(x, 2)) # one column represents one data point
 
-            x = x[indices]
-            t = t[indices]
-            xBatches = makechunks(x, batchSize)
-            tBatches = makechunks(t, batchSize)
+            batches = makechunks(indices, batchSize)
 
-            for (xBatch, tBatch) in zip(xBatches, tBatches)
-                for (xi, ti) in zip(xBatch, tBatch)
-                    output = forward!(net, xi)
-                    push!(costs, net.C(output, ti))
+            for batch in batches
+                for i in batch
+                    output = forward!(net, x[:, i])
+                    push!(costs, net.C(output, t[:, i]))
 
-                    backward!(net, xi, ti)
+                    backward!(net, x[:, i], t[:, i])
                 end
 
                 push!(accs, accuracy(net, x, t))
@@ -133,53 +134,6 @@ module Neural
             println("\tMean accuracy: $(mean(accs) * 100)")
         end
     end
-end
 
-using Main.Neural
-using PyCall
-using LinearAlgebra
-
-atanh(x) = tanh.(x)
-datanh(a) = [δ(i,j) * (1-a[i]^2) for i in 1:length(a), j in 1:length(a)]
-
-function relu(z::AbstractArray)::AbstractArray
-    return max.(0, z)
-end
-
-function drelu1(z::Number)::Number
-    return z > 0 ? 1.0 : 0.0
-end
-
-function drelu(z::AbstractArray)::AbstractArray
-    dvec = drelu1.(z)
-    return diagm(dvec[:, 1])
-end
-
-function softmax(z::AbstractArray)::AbstractArray
-    shift = maximum(z)
-
-    z = exp.(z .- shift)
-    total = sum(z)
-    return z ./ total
-end
-
-function dsoftmax(z::AbstractArray)::AbstractArray
-    n = length(z)
-
-    eye = Array{Number}(I, n, n)
-    w   = softmax(z)
-    e   = ones(n, 1)
-
-    return w * e' .* (eye - e * w')
-end
-
-function init()
-    datasets = pyimport("sklearn.datasets")
-    digits = datasets.load_digits()
-
-    x = [digits["data"][i, :] for i in 1:size(digits["data"], 1)]
-    t = map(i -> [δ(i, j) for j in 1:10], digits["target"] .+ 1)
-
-    net = Neural.Net(length(digits["feature_names"]), 10, [20], [relu, softmax], [drelu, dsoftmax])
-    Neural.train!(net, x, t, 100, 40, 1e-3)
+    
 end
