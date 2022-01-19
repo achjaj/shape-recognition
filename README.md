@@ -8,6 +8,7 @@ This program is part of my final exam.
 ## Trainset
 The *trainset* directory contains two files: *data.7z* and *targets*.
 The archive contains single file named *data*. Both *data* and *targets* files contains `mmap`-ed `BitMatrix`.
+
 The *data* matrix has size 10000x111907 and contains the training images. Every image was binarized,
 converted to `BitMatrix` and then converted to column `BitVector`. (see [imgsToSingleData.jl](imgsToSingleData.jl))
 
