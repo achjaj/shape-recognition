@@ -40,9 +40,9 @@ function processInput(inputDir::String, transformations, outputDir::String)
     end
 end
 
-inputs = ["/run/media/jakub/3315-3BCD/trainset/triangles/", "/run/media/jakub/3315-3BCD/trainset/rectangles", "/run/media/jakub/3315-3BCD/trainset/circles"]
-outputs = ["/run/media/jakub/3315-3BCD/trainset/r/triangles/", "/run/media/jakub/3315-3BCD/trainset/r/rectangles", "/run/media/jakub/3315-3BCD/trainset/r/circles"]
-#inputs = ["/home/jakub/Dokumenty/skola/siete/neural/presets/triangles/"]#, "/home/jakub/Dokumenty/skola/siete/neural/presets/rectangles/", "/home/jakub/Dokumenty/skola/siete/neural/presets/circles/"]
+inputs = [] # input directories
+outputs = [] # output directories
+
 
 rotations = [x -> imrotate(x, θ, fillvalue=1) for θ in (π/180):(π/180):2π]
 resize = [i -> imresize(i, 100, 100)]
