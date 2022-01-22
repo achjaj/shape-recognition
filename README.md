@@ -17,5 +17,5 @@ has one non-zero element which is at the position of the category index.
 The categories have following indices:
 
 - Circle: 1
-- rectangle: 2
-- Triangle: 3
+- Triangle: 2
+- Rectangle: 3

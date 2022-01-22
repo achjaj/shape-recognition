@@ -4,7 +4,7 @@ module Neural
     include("functions.jl")
 
     mutable struct Layer
-        W::Matrix{Float64} # weights
+        W::AbstractArray{Float64} # weights
         b::Vector{Float64} # bias
 
         afun::Function     # activaion function
@@ -14,7 +14,7 @@ module Neural
         a::Vector{Float64} # afun(z)
 
         dCda::Vector{Float64}
-        dCdW::Matrix{Float64}
+        dCdW::AbstractArray{Float64}
         dCdb::Vector{Float64}
 
         function Layer(inlen::Int64, outlen::Int64, afun::Function, dafun::Function)
@@ -31,10 +31,10 @@ module Neural
 
         function Net(inlength::Int64, sizes::Vector{Int64}, activations::Vector; # activations can be eighter vector of symbols or vector of 
                                                                                  # Tuple{Function, Function} where the 2nd function is derivative of the 1st
-                     random_seed::Int64=42, C::Function = (o, t) -> leasSquareCost, dC::Function = (o, t) -> dLeastSquareCost)
+                     random_seed::Int64=42, C::Function = leasSquareCost, dC::Function = dLeastSquareCost)
 
             Random.seed!(random_seed)
-            
+
             layers = Vector{Layer}()
             ilen = inlength
             for (size, id) in zip(sizes, activations)
@@ -46,7 +46,7 @@ module Neural
         end
     end
 
-    @views function makechunks(X::AbstractVector, n::Integer)
+    @views function makechunks(X::AbstractArray, n::Integer)
         c = length(X) ÷ n
         return [X[1+c*k:(k == n-1 ? end : c*k+c)] for k = 0:n-1]
     end
@@ -60,21 +60,21 @@ module Neural
 
     getFunctions(f::Tuple{Function, Function}) = f
 
-    function applyLayer!(layer::Layer, x::Vector)
+    function applyLayer!(layer::Layer, x::AbstractArray)
         layer.z = layer.W*x + layer.b
         layer.a = layer.afun(layer.z)
 
         return layer.a
     end
 
-    function forward!(net::Net, x::Vector)
+    function forward!(net::Net, x::AbstractArray)
         input = x
         map(layer -> input = applyLayer!(layer, input), net.layers)
 
         return input
     end
 
-    function backward!(net::Net, x::Vector{Float64}, t::Vector{Float64})
+    function backward!(net::Net, x::AbstractArray, t::AbstractArray)
        lastLayer = net.layers[end]
 
        lastLayer.dCda =  lastLayer.dafun(lastLayer.z) * net.dC(lastLayer.a, t)
@@ -101,16 +101,24 @@ module Neural
         layer.dCdW = zeros(size(layer.dCdW))
     end
 
-    predict(net::Net, x::Vector{Float64}) = argmax(forward!(net, x))
+    function identify(net::Net, x::AbstractArray)
+        vec = forward!(net, x)
+        id = argmax(vec)
 
-    function accuracy(net::Net, x::Matrix, t::Matrix)
-        predictions = (predict(net, x[:, i]) for i in size(x, 2)) # using generators to save memory
-        cmp = (Int(predictions[i] == argmax(t[:, i])) for i in 1:size(t, 2))
+        return id, vec
+    end
+
+    function accuracy(net::Net, x::AbstractArray, t::AbstractArray)
+        identities = map(i -> identify(net, x[:, i])[1], 1:size(x, 2))
+        cmp = [Int(identities[i] == argmax(t[:, i])) for i in 1:size(t, 2)]
 
         return sum(cmp)/size(t, 2)
     end
 
-    function train!(net::Net, x::Matrix, t::Matrix, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0)
+    function train!(net::Net, x::AbstractArray, t::AbstractArray, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0, epochSaveF = nothing)
+        forceDecay = false
+        lastCost = 1e5
+
         for i in 1:epochs
             costs = Vector{Float64}()
             accs = Vector{Float64}()
@@ -129,12 +137,26 @@ module Neural
                 push!(accs, accuracy(net, x, t))
                 updateLayer!.(net.layers, α)
             end
-            
-            α /= αDecay
 
-            println("Epoch $i:")
-            println("\tMean cost: $(mean(costs))")
-            println("\tMean accuracy: $(mean(accs) * 100)")
+            meanCost = mean(costs)
+            meanAcc = mean(accs) * 100
+            println("Epoch $i/$epochs:")
+            println("\tMean cost: $meanCost")
+            println("\tMean accuracy: $meanAcc%")
+            println("\tLearning rate: $α")
+
+            if epochSaveF !== nothing
+                epochSaveF(net, "epochs/e$(i)_$(round(Int, meanAcc))")
+            end
+            
+            if forceDecay
+                α /= αDecay
+                forceDecay = false
+            end
+
+            if meanCost > lastCost
+                forceDecay = true
+            end
         end
     end
 

@@ -12,7 +12,7 @@ module ImgTransform
         yr::Int64 # y coordinate of bottom right corner
     end
 
-    function escribedRectangle(binarized::Matrix)
+    function escribedRectangle(binarized::BitMatrix)
         filter = p -> p ≠ 0 # filter used to find relevant points 
 
         h, w = size(binarized)
@@ -28,16 +28,22 @@ module ImgTransform
         Rectangle(left, top, right, bottom)
     end
 
-    function cutoutShape(binarized::Matrix)
+    function cutoutShape(binarized::BitMatrix)
         rect = escribedRectangle(binarized)
         binarized[rect.yl:rect.yr, rect.xl:rect.xr] # cut out the rectangle containing the drawing
     end
 
-    function imgToBitMatrix(img::Matrix)
+    function imgToBitMatrix(img::Matrix, negative::Bool = true)
         noalfa = RGB{N0f8}.(img)
         binarized = binarize(noalfa, Otsu()) # binarize using Otsu algorithm; returns Matrix{Gray}
-        binarized = Bool.(binarized) # convert Matrix{Gray} to BitMatrix
-        binarized = xor.(binarized, 1) # make "negative image"; binarize function transform white color to 1 and black to 0, I want it the other way around
+        binarized = BitMatrix(binarized) # convert Matrix{Gray} to BitMatrix
+        if negative
+            binarized = BitMatrix(xor.(binarized, 1)) # make "negative image"; binarize function transform white color to 1 and black to 0, I want it the other way around
+        end
+
+        return binarized
     end
+
+    toVector(m::BitMatrix) = reshape(m, length(m), 1)[1:end]
 
 end
