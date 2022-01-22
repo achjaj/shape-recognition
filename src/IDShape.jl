@@ -79,8 +79,7 @@ end
 parsed = parseArgs()
 
 # now it creates neural net with:
-#   - input layer of output size 10 and with ReLu as activation function,
- #   - two hidden layers with sizes 5 and 10 and ReLu as activation functions
+#   - input layer of output size 20 and with ReLu as activation function,
 #   - and output layer of size 3 with Softmax as activation function
 net = Neural.Net(10000, [20, 3], [:relu, :softmax])
 
