@@ -25,7 +25,7 @@ function parseArgs()::Dict{Symbol, Any}
       required = true
   end
 
-  parse_args(["-w", "epochs/e99_97", "/tmp/test.png"], parser; as_symbols = true)
+  parse_args(parser; as_symbols = true)
 end
 
  # TODO: change to better format
