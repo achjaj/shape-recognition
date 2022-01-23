@@ -14,14 +14,15 @@ function parseArgs()::Dict{Symbol, Any}
 
   @add_arg_table! parser begin
     "--train", "-t"
-      help = "Training mode"
-      arg_type = String
+      help = "Training mode. This option takes a path to the targets matrix and the number of data points as arguments."
+      metavar = ["TARGETS", "LENGTH"]
+      nargs = 2
     "--weights", "-w"
-      help = "Path to saved weights"
+      help = "Set path to the saved weights"
       arg_type = String
       default = "weights"
     "data"
-      help = "Eighter image to process or training data"
+      help = "Eighter image to process or a training data"
       required = true
   end
 
@@ -38,22 +39,21 @@ function loadNet!(net::Neural.Net, path::String)
   net.layers = deserialize(path)
 end
   
-function loadMmaps(dataPath::String, targetsPath::String)
-  dataMap = mmap(dataPath, BitMatrix, (10000, 111907))
-  targetsMap = mmap(targetsPath, BitMatrix, (3, 111907))
+function loadMmaps(dataPath::String, targetsPath::String, length::Int)
+  dataMap = mmap(dataPath, BitMatrix, (10000, length))
+  targetsMap = mmap(targetsPath, BitMatrix, (3, length))
 
-  indices = [[rand(1:54508) for i in 1:700]..., [rand(54509:86638) for i in 1:700]..., [rand(86639:111907) for i in 1:700]...]
-
-  return dataMap[:, indices], targetsMap[:, indices]
+  return dataMap, targetsMap
 end
 
-function trainingMode(net::Neural.Net, dataPath::String, targetsPath::String)
-  data, targets = loadMmaps(dataPath, targetsPath)
-  Neural.train!(net, data, targets, 100, 100, 1e-3, 3/4, saveNet)
+function trainingMode(net::Neural.Net, dataPath::String, targetsPath::String, length::Int)
+  data, targets = loadMmaps(dataPath, targetsPath, length)
+  Neural.train!(net, data, targets, 100, 150, 1e-3, 4/3, saveNet, 3)
 
   saveNet(net, "weights")
 end
 
+# Preparse the image for the neural network
 function loadAndPrepareImg(imgPath::String)
   img = load(imgPath)
 
@@ -72,7 +72,7 @@ function identify(net::Neural.Net, weightsPath::String, imgPath::String)
   img = loadAndPrepareImg(imgPath)
   id, probs = Neural.identify(net, img)
 
-  println("The shape on the image is a $(names[id]) ($(round(probs[id], digits=4) * 100)% confidence).")
+  println("The shape in the image is a $(names[id]) ($(round(probs[id], digits=4) * 100)% confidence).")
 end
 
 
@@ -84,9 +84,9 @@ parsed = parseArgs()
 net = Neural.Net(10000, [20, 3], [:relu, :softmax])
 
 
-if typeof(parsed[:train]) == String
-  trainingMode(net, parsed[:data], parsed[:train])
-
+if length(parsed[:train]) > 0
+  len = parse(Int, parsed[:train][2])
+  trainingMode(net, parsed[:data], parsed[:train][1], len)
 else
   identify(net, parsed[:weights], parsed[:data])
 end

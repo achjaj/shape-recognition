@@ -115,9 +115,9 @@ module Neural
         return sum(cmp)/size(t, 2)
     end
 
-    function train!(net::Net, x::AbstractArray, t::AbstractArray, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0, epochSaveF = nothing)
-        forceDecay = false
+    function train!(net::Net, x::AbstractArray, t::AbstractArray, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0, epochSaveF = nothing, increaseAt::Int = 3)
         lastCost = 1e5
+        successiveDecrease = 0
 
         for i in 1:epochs
             costs = Vector{Float64}()
@@ -148,15 +148,20 @@ module Neural
             if epochSaveF !== nothing
                 epochSaveF(net, "epochs/e$(i)_$(round(Int, meanAcc))")
             end
-            
-            if forceDecay
+
+            if meanCost < lastCost
+                successiveDecrease += 1
+            elseif meanCost > lastCost
                 α /= αDecay
-                forceDecay = false
+                successiveDecrease = 0
             end
 
-            if meanCost > lastCost
-                forceDecay = true
+            if successiveDecrease == increaseAt
+                α *= αDecay
+                successiveDecrease = 0
             end
+
+            lastCost = meanCost
         end
     end
 

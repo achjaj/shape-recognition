@@ -18,7 +18,7 @@ end
 toVector(m::BitMatrix) = reshape(m, length(m), 1)[1:end]
 
 function numberOfFiles(dir::String)
-    output = readchomp(`./numberOfFilesInDir.sh $dir`) # faster than readdir: does not collect file names
+    output = readchomp(`src/numberOfFilesInDir.sh $dir`) # faster than readdir: does not collect file names
 
     return parse(Int64, output)
 end
