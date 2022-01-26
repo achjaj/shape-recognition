@@ -21,6 +21,10 @@ function parseArgs()::Dict{Symbol, Any}
       help = "Set path to the saved weights"
       arg_type = String
       default = "weights"
+    "--test", "-T"
+      help = "Test the trained neural network"
+      metavar = ["TARGETS", "LENGTH"]
+      nargs = 2
     "data"
       help = "Eighter image to process or a training data"
       required = true
@@ -53,6 +57,13 @@ function trainingMode(net::Neural.Net, dataPath::String, targetsPath::String, le
   saveNet(net, "weights")
 end
 
+function testingMode(net::Neural.Net, weightsPath::String, dataPath::String, targetsPath::String, length::Int)
+  data, targets = loadMmaps(dataPath, targetsPath, length)
+  loadNet!(net, weightsPath)
+
+  println("Testing accuracy is $(Neural.accuracy(net, data, targets) * 100)%")
+end
+
 # Preparse the image for the neural network
 function loadAndPrepareImg(imgPath::String)
   img = load(imgPath)
@@ -83,10 +94,12 @@ parsed = parseArgs()
 #   - and output layer of size 3 with Softmax as activation function
 net = Neural.Net(10000, [20, 3], [:relu, :softmax])
 
-
 if length(parsed[:train]) > 0
   len = parse(Int, parsed[:train][2])
   trainingMode(net, parsed[:data], parsed[:train][1], len)
+elseif length(parsed[:test]) > 0
+  len = parse(Int, parsed[:test][2])
+  testingMode(net, parsed[:weights], parsed[:data], parsed[:test][1], len)
 else
   identify(net, parsed[:weights], parsed[:data])
 end

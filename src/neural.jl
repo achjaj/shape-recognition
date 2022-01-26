@@ -1,6 +1,5 @@
 module Neural
     using Random
-    using LinearAlgebra
     include("functions.jl")
 
     mutable struct Layer
@@ -31,9 +30,7 @@ module Neural
 
         function Net(inlength::Int64, sizes::Vector{Int64}, activations::Vector; # activations can be eighter vector of symbols or vector of 
                                                                                  # Tuple{Function, Function} where the 2nd function is derivative of the 1st
-                     random_seed::Int64=42, C::Function = leasSquareCost, dC::Function = dLeastSquareCost)
-
-            Random.seed!(random_seed)
+                    C::Function = leasSquareCost, dC::Function = dLeastSquareCost)
 
             layers = Vector{Layer}()
             ilen = inlength
@@ -116,54 +113,54 @@ module Neural
     end
 
     function train!(net::Net, x::AbstractArray, t::AbstractArray, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0, epochSaveF = nothing, increaseAt::Int = 3)
-        lastCost = 1e5
-        successiveDecrease = 0
+    lastCost = 1e5
+    successiveDecrease = 0
 
-        for i in 1:epochs
-            costs = Vector{Float64}()
-            accs = Vector{Float64}()
-            indices = shuffle(1:size(x, 2)) # one column represents one data point
+    for i in 1:epochs
+        costs = Vector{Float64}()
+        accs = Vector{Float64}()
+        indices = shuffle(1:size(x, 2)) # one column represents one data point
 
-            batches = makechunks(indices, batchSize)
+        batches = makechunks(indices, batchSize)
 
-            for batch in batches
-                for i in batch
-                    output = forward!(net, x[:, i])
-                    push!(costs, net.C(output, t[:, i]))
+        for batch in batches
+            for i in batch
+                output = forward!(net, x[:, i])
+                push!(costs, net.C(output, t[:, i]))
 
-                    backward!(net, x[:, i], t[:, i])
-                end
-
-                push!(accs, accuracy(net, x, t))
-                updateLayer!.(net.layers, α)
+                backward!(net, x[:, i], t[:, i])
             end
 
-            meanCost = mean(costs)
-            meanAcc = mean(accs) * 100
-            println("Epoch $i/$epochs:")
-            println("\tMean cost: $meanCost")
-            println("\tMean accuracy: $meanAcc%")
-            println("\tLearning rate: $α")
-
-            if epochSaveF !== nothing
-                epochSaveF(net, "epochs/e$(i)_$(round(Int, meanAcc))")
-            end
-
-            if meanCost < lastCost
-                successiveDecrease += 1
-            elseif meanCost > lastCost
-                α /= αDecay
-                successiveDecrease = 0
-            end
-
-            if successiveDecrease == increaseAt
-                α *= αDecay
-                successiveDecrease = 0
-            end
-
-            lastCost = meanCost
+            push!(accs, accuracy(net, x, t))
+            updateLayer!.(net.layers, α)
         end
+
+        meanCost = mean(costs)
+        meanAcc = mean(accs) * 100
+        println("Epoch $i/$epochs:")
+        println("\tMean cost: $meanCost")
+        println("\tMean accuracy: $meanAcc%")
+        println("\tLearning rate: $α")
+
+        if epochSaveF !== nothing
+            epochSaveF(net, "epochs/e$(i)_$(round(Int, meanAcc))")
+        end
+
+        if meanCost < lastCost
+            successiveDecrease += 1
+        elseif meanCost > lastCost
+            α /= αDecay
+            successiveDecrease = 0
+        end
+
+        if successiveDecrease == increaseAt
+            α *= αDecay
+            successiveDecrease = 0
+        end
+
+        lastCost = meanCost
     end
+end
 
     
 end
