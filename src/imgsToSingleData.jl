@@ -6,7 +6,7 @@ using Dates
 
 log(msg::String) = println("$(Dates.now()) $msg")
 
-dirs = [] # input dirs
+dirs = ["/run/media/jakub/3315-3BCD/trainset3/circles", "/run/media/jakub/3315-3BCD/trainset3/triangles/", "/run/media/jakub/3315-3BCD/trainset3/rectangles/"] # input dirs
 
 function toBitMatrix(img::Matrix)
     noalpha = RGB{N0f8}.(img)
@@ -24,13 +24,14 @@ function numberOfFiles(dir::String)
 end
 
 
-vectorLen = 100*100 # the images have these dimensions
+vectorLen = 30*30 # the images have these dimensions
 totalNumberOfFiles = sum(numberOfFiles.(dirs))
+println(totalNumberOfFiles)
 
-dataFile = open("", "w+") # output data file
+dataFile = open("/home/jakub/Dokumenty/skola/siete/neural/trainset/trainset4", "w+") # output data file
 dataMap = mmap(dataFile, BitMatrix, (vectorLen, totalNumberOfFiles))
 
-targetsFile = open("", "w+") # output targets file
+targetsFile = open("/home/jakub/Dokumenty/skola/siete/neural/trainset/targets4", "w+") # output targets file
 targetsMap = mmap(targetsFile, BitMatrix, (3, totalNumberOfFiles)) 
 
 columnIndex = 1

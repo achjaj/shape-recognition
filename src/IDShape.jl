@@ -44,7 +44,7 @@ function loadNet!(net::Neural.Net, path::String)
 end
   
 function loadMmaps(dataPath::String, targetsPath::String, length::Int)
-  dataMap = mmap(dataPath, BitMatrix, (10000, length))
+  dataMap = mmap(dataPath, BitMatrix, (900, length))
   targetsMap = mmap(targetsPath, BitMatrix, (3, length))
 
   return dataMap, targetsMap
@@ -52,7 +52,7 @@ end
 
 function trainingMode(net::Neural.Net, dataPath::String, targetsPath::String, length::Int)
   data, targets = loadMmaps(dataPath, targetsPath, length)
-  Neural.train!(net, data, targets, 100, 150, 1e-3, 4/3, saveNet, 3)
+  Neural.train!(net, data, targets, 100, 1000, 1e-2, 10/9)
 
   saveNet(net, "weights")
 end
@@ -71,7 +71,7 @@ function loadAndPrepareImg(imgPath::String)
   binarized = ImgTransform.imgToBitMatrix(img) # convert image to "negative" (swapped 0 and 1) BitMatrix
   cutout = ImgTransform.cutoutShape(binarized) # locate the shape on image, cut it out
   positive = xor.(cutout, 1) # change back to positive
-  resized = imresize(positive, 100, 100) # resize; returns Matrix{Float64}
+  resized = imresize(positive, 30, 30) # resize; returns Matrix{Float64}
   resized = BitMatrix(round.(Int, resized))
 
   return ImgTransform.toVector(resized) # return vector
@@ -84,6 +84,11 @@ function identify(net::Neural.Net, weightsPath::String, imgPath::String)
   id, probs = Neural.identify(net, img)
 
   println("The shape in the image is a $(names[id]) ($(round(probs[id], digits=4) * 100)% confidence).")
+
+  for (l, p) in zip(names, probs)
+    print("$l: $p ")
+  end
+  println()
 end
 
 
@@ -92,7 +97,7 @@ parsed = parseArgs()
 # now it creates neural net with:
 #   - hidden layer of output size 20 and with ReLu as activation function,
 #   - and output layer of size 3 with Softmax as activation function
-net = Neural.Net(10000, [20, 3], [:relu, :softmax])
+net = Neural.Net(900, [10, 3], [:relu, :softmax])
 
 if length(parsed[:train]) > 0
   len = parse(Int, parsed[:train][2])

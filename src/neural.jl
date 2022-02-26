@@ -1,5 +1,6 @@
 module Neural
     using Random
+    using Plots
     include("functions.jl")
 
     mutable struct Layer
@@ -30,7 +31,7 @@ module Neural
 
         function Net(inlength::Int64, sizes::Vector{Int64}, activations::Vector; # activations can be eighter vector of symbols or vector of 
                                                                                  # Tuple{Function, Function} where the 2nd function is derivative of the 1st
-                    C::Function = leasSquareCost, dC::Function = dLeastSquareCost)
+                    C::Function = softmaxLikelihood, dC::Function = dSoftmaxLikelihood)
 
             layers = Vector{Layer}()
             ilen = inlength
@@ -49,9 +50,6 @@ module Neural
     end
 
     mean(x) = sum(x)/length(x)
-
-    leasSquareCost(o, t) = sum((o - t).^2)/2
-    dLeastSquareCost(o, t) = o-t
 
     getFunctions(id::Symbol) = activations[id]
 
@@ -112,54 +110,44 @@ module Neural
         return sum(cmp)/size(t, 2)
     end
 
-    function train!(net::Net, x::AbstractArray, t::AbstractArray, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0, epochSaveF = nothing, increaseAt::Int = 3)
-    lastCost = 1e5
-    successiveDecrease = 0
+    function train!(net::Net, x::AbstractArray, t::AbstractArray, batchSize::Int64, epochs::Int64, α::Float64, αDecay::Float64 = 1.0)
+    plotly()
+    
+    meanCosts = Vector{Float64}()
+    accs = Vector{Float64}()
+
+    testIndices = shuffle(1:size(x, 2))[1:2*batchSize]
+    trainIndices = filter(i -> !(i in testIndices), 1:size(x, 2))
 
     for i in 1:epochs
         costs = Vector{Float64}()
-        accs = Vector{Float64}()
-        indices = shuffle(1:size(x, 2)) # one column represents one data point
+        acc = 0
+        indices = shuffle(trainIndices) # one column represents one data point
 
-        batches = makechunks(indices, batchSize)
-
-        for batch in batches
-            for i in batch
-                output = forward!(net, x[:, i])
-                push!(costs, net.C(output, t[:, i]))
-
-                backward!(net, x[:, i], t[:, i])
-            end
-
-            push!(accs, accuracy(net, x, t))
+        for i in indices[1:batchSize]
+            forward!(net, x[:, i])
+            backward!(net, x[:, i], t[:, i])
             updateLayer!.(net.layers, α)
-        end
 
+            output = forward!(net, x[:, i])
+            push!(costs, net.C(output, t[:, i]))
+        end
+        acc = accuracy(net, x[:, testIndices], t[:, testIndices])
         meanCost = mean(costs)
-        meanAcc = mean(accs) * 100
+        α /= αDecay
+
+        push!(meanCosts, meanCost)
+        push!(accs, acc);
         println("Epoch $i/$epochs:")
         println("\tMean cost: $meanCost")
-        println("\tMean accuracy: $meanAcc%")
+        println("\tAccuracy: $(acc *100)%")
         println("\tLearning rate: $α")
-
-        if epochSaveF !== nothing
-            epochSaveF(net, "epochs/e$(i)_$(round(Int, meanAcc))")
-        end
-
-        if meanCost < lastCost
-            successiveDecrease += 1
-        elseif meanCost > lastCost
-            α /= αDecay
-            successiveDecrease = 0
-        end
-
-        if successiveDecrease == increaseAt
-            α *= αDecay
-            successiveDecrease = 0
-        end
-
-        lastCost = meanCost
     end
+
+    plt = plot(1:epochs, meanCosts, xlabel = "Epoch", ylabel = "Mean cost", legend = false, line = [:scatter, :path], dpi = 600, size = (1440, 810), grid = false)
+    plot!(plt, 1:epochs, accs, line = [:scatter, :path])
+    display(plt)
+    #savefig(plt, "plt.png")
 end
 
     

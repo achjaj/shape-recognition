@@ -40,15 +40,16 @@ function processInput(inputDir::String, transformations, outputDir::String)
     end
 end
 
-inputs = [] # input directories
-outputs = [] # output directories
+inputs = ["/home/jakub/Dokumenty/skola/siete/neural/presets/circles/", "/home/jakub/Dokumenty/skola/siete/neural/presets/rectangles/", "/home/jakub/Dokumenty/skola/siete/neural/presets/triangles/"] # input directories
+outputs = ["/run/media/jakub/3315-3BCD/trainset3/circles", "/run/media/jakub/3315-3BCD/trainset3/rectangles", "/run/media/jakub/3315-3BCD/trainset3/triangles"] # output directories
 
 
-rotations = [x -> imrotate(x, θ, fillvalue=1) for θ in (π/180):(π/180):2π]
-resize = [i -> imresize(i, 100, 100)]
+rotations = [x -> imrotate(x, θ, fillvalue=1) for θ in (10*π/180):(10*π/180):2π]
+resize = [i -> imresize(i, 30, 30)]
+rotresize = map(rot -> x -> imresize(rot(x), 30, 30), rotations)
 #TODO: add more transfomations; gaussian noise, add blob to random place, remove random part of the shape
 
-transformations = [resize]
+transformations = [rotresize]
 #transformations = [rotations]
 #transformations = [[x -> imrotate(x, π/4, fillvalue=1)]]
 
