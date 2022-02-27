@@ -1,4 +1,4 @@
-include("neural.jl")
+include("neural2.jl")
 include("imgtransform.jl")
   
 using ArgParse
@@ -34,14 +34,12 @@ function parseArgs()::Dict{Symbol, Any}
 end
 
  # TODO: change to better format
-function saveNet(net::Neural.Net, path::String)
-  serialize(path, net.layers)
+function saveNet(net::Net, path::String)
+  serialize(path, net)
 end
 
 # TODO: change to better format
-function loadNet!(net::Neural.Net, path::String)
-  net.layers = deserialize(path)
-end
+loadNet(path::String) = deserialize(path)
   
 function loadMmaps(dataPath::String, targetsPath::String, length::Int)
   dataMap = mmap(dataPath, BitMatrix, (900, length))
@@ -52,14 +50,14 @@ end
 
 function trainingMode(net::Neural.Net, dataPath::String, targetsPath::String, length::Int)
   data, targets = loadMmaps(dataPath, targetsPath, length)
-  Neural.train!(net, data, targets, 100, 1000, 1e-2, 10/9)
+  train!(net, data, targets, 150, 100, 1e-2, 10/9)
 
   saveNet(net, "weights")
 end
 
-function testingMode(net::Neural.Net, weightsPath::String, dataPath::String, targetsPath::String, length::Int)
+function testingMode(weightsPath::String, dataPath::String, targetsPath::String, length::Int)
   data, targets = loadMmaps(dataPath, targetsPath, length)
-  loadNet!(net, weightsPath)
+  net = loadNet!(weightsPath)
 
   println("Testing accuracy is $(Neural.accuracy(net, data, targets) * 100)%")
 end
@@ -77,11 +75,12 @@ function loadAndPrepareImg(imgPath::String)
   return ImgTransform.toVector(resized) # return vector
 end
 
-function identify(net::Neural.Net, weightsPath::String, imgPath::String)
-  loadNet!(net, weightsPath)
+function identify(weightsPath::String, imgPath::String)
+  net = loadNet(weightsPath)
 
   img = loadAndPrepareImg(imgPath)
-  id, probs = Neural.identify(net, img)
+  probs = forward(net, img)[end]
+  id = argmax(probs)
 
   println("The shape in the image is a $(names[id]) ($(round(probs[id], digits=4) * 100)% confidence).")
 
@@ -94,17 +93,12 @@ end
 
 parsed = parseArgs()
 
-# now it creates neural net with:
-#   - hidden layer of output size 20 and with ReLu as activation function,
-#   - and output layer of size 3 with Softmax as activation function
-net = Neural.Net(900, [10, 3], [:relu, :softmax])
-
 if length(parsed[:train]) > 0
   len = parse(Int, parsed[:train][2])
   trainingMode(net, parsed[:data], parsed[:train][1], len)
 elseif length(parsed[:test]) > 0
   len = parse(Int, parsed[:test][2])
-  testingMode(net, parsed[:weights], parsed[:data], parsed[:test][1], len)
+  testingMode(parsed[:weights], parsed[:data], parsed[:test][1], len)
 else
-  identify(net, parsed[:weights], parsed[:data])
+  identify(parsed[:weights], parsed[:data])
 end
