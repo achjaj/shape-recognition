@@ -49,7 +49,7 @@ resize = [i -> imresize(i, 30, 30)]
 rotresize = map(rot -> x -> imresize(rot(x), 30, 30), rotations)
 #TODO: add more transfomations; gaussian noise, add blob to random place, remove random part of the shape
 
-transformations = [rotresize]
+transformations = [resize]
 #transformations = [rotations]
 #transformations = [[x -> imrotate(x, π/4, fillvalue=1)]]
 

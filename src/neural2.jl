@@ -8,7 +8,7 @@ mutable struct Net
     biases::Vector{Vector}
     f::Vector{Function}
     
-    function Net(sizes::Vector{Int}...)
+    function Net(sizes::Int...)
         dist = Distributions.Uniform(-0.1, 0.1)
 
         weights = Vector{Matrix}()
@@ -22,7 +22,7 @@ mutable struct Net
             push!(biases, b)
         end
 
-        new(weights, biases, [fill(relu, length(sizes) - 2); softmax])
+        new(weights, biases, [fill(vtanh, length(sizes) - 2); softmax])
     end
 end
 
@@ -71,7 +71,7 @@ end
 
 function update_weights(net::Net, batch_x::Vector, batch_t::Vector, α::Number, regularization::Number)
     out_grad(o, t) = o - [Int(==(i, t)) for i in 1:length(o)]
-    hid_grad(W, g, h) = drelu(h) * (W' * g)
+    hid_grad(W, g, h) = dtanh(h) * (W' * g)
     dW(g, h) = g*h'
 
     outputs = map(x -> forward(net, x), batch_x)
@@ -137,3 +137,21 @@ function train(net::Net, x::Vector, t::Vector, epochs::Int, batch_size::Int, rat
     plot!(plt, 1:epochs, train_accs, line = [:scatter], label = "Train accuracy")
     display(plt)
 end
+
+using Serialization
+using Mmap
+data = deserialize("trainset/data2")
+targets = deserialize("trainset/targets2")
+
+#data = [Float64.(Gray.(d)) for d in data]
+
+N = 310
+l = 900
+#data = mmap("trainset/trainst3", BitMatrix, (l, N))
+#targets = mmap("trainset/targets3", BitMatrix, (3, N))
+
+#data = [data[:, i] for i in 1:N]
+#targets = [argmax(targets[:, i]) for i in 1:N]
+
+net = Net(l, 10, 3)
+train(net, data, targets, 750, 50, 2e-2, regularization = 1e-2)

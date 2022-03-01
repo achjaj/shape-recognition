@@ -6,7 +6,7 @@ I(n) = [δ(i, j) for i = 1:n, j = 1:n]
 
 vtanh(x::Vector) = tanh.(x)
 
-dtanh(x::Vector) = diagm([i^2 for i in x])
+dtanh(x::Vector) = I(length(x)) - diagm([i^2 for i in x])
 
 relu(z::Vector) = max.(0, z)
 
